@@ -1,9 +1,9 @@
 
-var users = []
+const header = require('./midlewere/header')
 
 module.exports = (app, connection) => {
   // inserir cliente
-  app.post('/users', (req, res) => {
+  app.post('/users',(req, res) => {
     const user = req.body
 
     connection.query('INSERT INTO clientes SET ?', [user], (error, results) => {
@@ -18,7 +18,12 @@ module.exports = (app, connection) => {
           throw error
         }
         
-        res.send(results[0])
+        res.send(
+          {
+            error: "",
+            data: results[0]
+          }
+        )
   
       });
 
@@ -27,7 +32,7 @@ module.exports = (app, connection) => {
   })
 
   // atualizar cliente
-  app.put('/users/:id', (req, res) => {
+  app.put('/users/:id', header, (req, res) => {
     const user = req.body
     const {id} = req.params
 
@@ -42,7 +47,12 @@ module.exports = (app, connection) => {
           throw error
         }
         
-        res.send(results[0])
+         res.send(
+          {
+            error: "",
+            data: results[0]
+          }
+        )
   
       });
 
@@ -51,16 +61,17 @@ module.exports = (app, connection) => {
   })
 
   // ver todos os clientes
-  app.get('/users', (req, res) => {
+  app.get('/users',header,  (req, res) => {
 
-    connection.query('SELECT * FROM clientes', (error, results) => {
+    connection.query('SELECT cl.id, cl.nome, cl.endereco, s.discricao AS sexo, e.descricao AS estado, cl.email FROM clientes AS cl INNER JOIN sexo s ON cl.sexo_id = s.id'+
+    ' INNER JOIN estado e ON cl.estado_id = e.id ORDER BY cl.id DESC', (error, results) => {
       if(error){
         throw error
       }
       
       res.send({
         code: 200,
-        data: results,
+        list: results,
         total: results.length
       })
 
@@ -69,10 +80,11 @@ module.exports = (app, connection) => {
   })
 
   // ver um cliente 
-  app.get('/users/:id', (req, res) => {
+  app.get('/users/:id', header, (req, res) => {
     const {id} = req.params
 
-    connection.query(`SELECT * FROM clientes WHERE id = ${id}`, (error, results) => {
+    connection.query(`SELECT cl.id, cl.nome, cl.email, cl.endereco, s.discricao, e.descricao FROM clientes AS cl INNER JOIN sexo s ON cl.sexo_id = s.id
+    INNER JOIN estado e ON cl.estado_id = e.id WHERE cl.id = ${id}`, (error, results) => {
       if(error){
         throw error
       }
@@ -80,6 +92,25 @@ module.exports = (app, connection) => {
       res.send({
         code: 200,
         data: results[0],
+      })
+
+    });
+
+  })
+
+  // search
+  app.get('/users-search/:search', header, (req, res) => {
+    const {search} = req.params
+
+    connection.query(`SELECT cl.id, cl.nome, cl.email, cl.endereco, s.discricao, e.descricao FROM clientes AS cl INNER JOIN sexo s ON cl.sexo_id = s.id
+    INNER JOIN estado e ON cl.estado_id = e.id WHERE cl.nome LIKE '%${search}%' OR cl.email LIKE '%${search}%'`, (error, results) => {
+      if(error){
+        throw error
+      }
+      
+      res.send({
+        code: 200,
+        data: results,
       })
 
     });
